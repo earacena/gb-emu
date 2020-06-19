@@ -5,10 +5,16 @@
  */
 
 pub struct Memory {
-    pub ram: [u8; 0xFFFF],
+    pub ram: [u8; 0x10000],
 }
 
 impl Memory {
+    pub fn initialize() -> Memory {
+        let memory = Memory {
+            ram: [0x00; 0x10000]
+        };
+        memory
+    }
 
     pub fn read(&self, address: u16) -> u8 {
         let index = usize::from(address);
@@ -21,6 +27,7 @@ impl Memory {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
 
@@ -28,7 +35,7 @@ mod tests {
 
     #[test]
     fn test_read() {
-        let mut mem = Memory { ram: [0x00; 0x10000], };
+        let mut mem = Memory::initialize();
 
         mem.ram[0x65] = 0x23;
         assert_eq!(mem.read(0x65), 0x23);
@@ -36,7 +43,7 @@ mod tests {
 
     #[test]
     fn test_write() {
-        let mut mem = Memory {ram: [0x00; 0x10000], };
+        let mut mem = Memory::initialize();
 
         let address: u16 = 0x35;
         let data: u8 = 0xA1; 

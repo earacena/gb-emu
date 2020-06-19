@@ -3,10 +3,6 @@
  * file:    emulator.rs
  */
 
-//mod cpu;
-//mod memory;
-
-
 use crate::cpu::CPU;
 use crate::memory::Memory;
 
@@ -20,3 +16,4 @@ impl Emulator {
         println!("Executing...");
     }
 }
+
