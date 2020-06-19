@@ -4,6 +4,9 @@
  */
 
 use crate::opcode;
+use crate::opcode::OpcodeResult;
+use crate::opcode::OpcodeError;
+use crate::opcode::Opcode;
 use crate::memory::Memory;
 
 
@@ -45,11 +48,12 @@ impl CPU {
         opcode
     }
 
-    pub fn decode_and_execute(&mut self, mem: &Memory, opcode: u8) {
-        match opcode {
-            0x00 => opcode::op_0x00(self),
-            _ => println!("Opcode [{:#6x}] not implemented.", opcode),
-        }
+    pub fn decode(&mut self, mem: &Memory, opcode_val: u8) -> OpcodeResult {
+        let opcode: OpcodeResult = match opcode_val {
+            0x00 => Ok(Opcode{ val: opcode_val, func: opcode::op_0x00}),
+            _    => Err(OpcodeError::NotImplemented),
+        };
+        opcode
     }
 }
 
@@ -67,17 +71,32 @@ mod tests {
         mem.write(0x0011, 0xBB);
 
         cpu.pc = 0x0010;
-        let mut opcode: u8 = cpu.fetch(&mem);
-        assert_eq!(opcode, 0xAA);
+        let mut opcode_val: u8 = cpu.fetch(&mem);
+        assert_eq!(opcode_val, 0xAA);
         assert_eq!(cpu.pc, 0x0011);
 
-        opcode = cpu.fetch(&mem);
-        assert_eq!(opcode, 0xBB);
+        opcode_val = cpu.fetch(&mem);
+        assert_eq!(opcode_val, 0xBB);
         assert_eq!(cpu.pc, 0x0012);
     }
 
+    #[test]
+    fn test_decode() {
+        let mut cpu = CPU::initialize();
+        let mut mem = Memory::initialize();
 
-    fn test_decode_and_execute() {
-
+        mem.write(0x0010, 0x00);
+        cpu.pc = 0x0010;
+        let opcode_val: u8 = 0x00;
+        let opcode: OpcodeResult = cpu.decode(&mem, opcode_val);
+        
+        // Check if the correct function was returned by casting it and
+        // the function definition to pointers and checking if the pointers
+        // are the same. Casting both to usize also works, and preferable
+        // to using raw pointers.
+        match opcode {
+            Ok(opcode)  => assert_eq!(opcode.func as usize, opcode::op_0x00 as usize),
+            Err(error)  => panic!("Error decoding opcode function: `{:?}`", error),
+        }
     }
 }
