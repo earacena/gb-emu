@@ -13,15 +13,10 @@ use crate::emulator::Emulator;
 use crate::memory::Memory;
 
 fn main() {
+    let mut memory = Memory::initialize();
+    let mut cpu = CPU::initialize();
 
-    let memory = Memory::initialize();
-    let cpu = CPU::initialize();
-
-    let emu = Emulator {
-        memory,
-        cpu,
-    };
+    let mut emu = Emulator { memory, cpu };
 
     emu.execute();
-    println!("Exiting...");
 }

@@ -19,6 +19,6 @@ pub struct Opcode {
 }
 
 pub fn op_0x00(cpu: &mut CPU) {
-        // 0x00 - NOP
-        println!("Doing nothing @ PC {:#6x}", cpu.pc);
+    // 0x00 - NOP
+    println!("Doing nothing @ PC: {:#06x}", cpu.pc-1);
 }

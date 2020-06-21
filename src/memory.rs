@@ -11,7 +11,7 @@ pub struct Memory {
 impl Memory {
     pub fn initialize() -> Memory {
         let memory = Memory {
-            ram: [0x00; 0x10000]
+            ram: [0x00; 0x10000],
         };
         memory
     }
@@ -20,13 +20,12 @@ impl Memory {
         let index = usize::from(address);
         self.ram[index]
     }
-    
+
     pub fn write(&mut self, address: u16, data: u8) {
         let index = usize::from(address);
         self.ram[index] = data;
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -46,11 +45,10 @@ mod tests {
         let mut mem = Memory::initialize();
 
         let address: u16 = 0x35;
-        let data: u8 = 0xA1; 
+        let data: u8 = 0xA1;
         mem.write(address, data);
 
         let index = usize::from(address);
         assert_eq!(mem.ram[index], data);
     }
-
 }
