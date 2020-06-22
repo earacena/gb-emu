@@ -3,12 +3,13 @@
  * file:    cpu.rs
  */
 
-use crate::memory::Memory;
+use crate::memory::{Memory, MemoryReadResult, MemoryWriteResult};
 use crate::opcode;
-use crate::opcode::Opcode;
-use crate::opcode::OpcodeError;
-use crate::opcode::OpcodeResult;
+use crate::opcode::{Opcode, OpcodeTable};
 use std::fmt;
+
+type OpcodeValue = u8;
+type Data = u8;
 
 pub struct CPU {
     pub reg_a: u8,
@@ -21,6 +22,8 @@ pub struct CPU {
     pub flags: u8,
     pub sp: u16,
     pub pc: u16,
+
+    pub table: OpcodeTable,
 }
 
 impl fmt::Debug for CPU {
@@ -28,9 +31,9 @@ impl fmt::Debug for CPU {
         write!(
             f,
             concat!(
-            "CPU [A: {:#04x} B:{:#04x} C: {:#04x} ",
-            "D: {:#04x} E: {:#04x} H:{:#04x} L: {:#04x}",
-            " Flags: {:#04x} SP: {:#06x} PC: {:#06x}]"
+                "CPU [A: {:#04x} B:{:#04x} C: {:#04x} ",
+                "D: {:#04x} E: {:#04x} H:{:#04x} L: {:#04x}",
+                " Flags: {:#04x} SP: {:#06x} PC: {:#06x}]"
             ),
             self.reg_a,
             self.reg_b,
@@ -59,29 +62,32 @@ impl CPU {
             flags: 0x00,
             sp: 0x0000,
             pc: 0x0000,
+
+            table: OpcodeTable::load_tables(),
         };
         cpu
     }
 
-    pub fn fetch(&mut self, mem: &Memory) -> u8 {
-        let opcode = mem.read(self.pc);
-        self.pc += 1;
-        opcode
-    }
-
-    pub fn decode(&mut self, mem: &Memory, opcode_val: u8) -> OpcodeResult {
-        let opcode: OpcodeResult = match opcode_val {
-            0x00 => Ok(Opcode {
-                val: opcode_val,
-                func: opcode::op_0x00,
-            }),
-            _ => Err(OpcodeError::NotImplemented),
+    pub fn fetch(&mut self, mem: &Memory) -> Data {
+        let result = match mem.read(self.pc) {
+            Ok(value) => value,
+            Err(err) => panic!("{:?}", err),
         };
-        opcode
+        self.pc += 1;
+        result
     }
 
-    pub fn execute(&mut self, func: fn(&mut CPU)) {
-        func(self)
+    pub fn decode(&mut self, mem: &Memory, value: OpcodeValue) -> Opcode {
+        let index = usize::from(value);
+        match index {
+            0x00..=0xCA | 0xCC..=0xFF => self.table.op[index],
+            0xCB => self.table.cb[usize::from(self.fetch(&mem))],
+            _ => panic!("Invalid memory address during decoding: {:#06}", index),
+        }
+    }
+
+    pub fn execute(&mut self, opcode: Opcode) {
+        opcode(self)
     }
 }
 
@@ -94,16 +100,23 @@ mod tests {
         let mut cpu = CPU::initialize();
         let mut mem = Memory::initialize();
 
-        mem.write(0x0010, 0xAA);
-        mem.write(0x0011, 0xBB);
+        match mem.write(0x0010, 0xAA) {
+            Ok(()) => (),
+            Err(err) => panic!("{:?}", err),
+        };
+
+        match mem.write(0x0011, 0xBB) {
+            Ok(()) => (),
+            Err(err) => panic!("{:?}", err),
+        };
 
         cpu.pc = 0x0010;
-        let mut opcode_val: u8 = cpu.fetch(&mem);
-        assert_eq!(opcode_val, 0xAA);
+        let mut value: OpcodeValue = cpu.fetch(&mem);
+        assert_eq!(value, 0xAA);
         assert_eq!(cpu.pc, 0x0011);
 
-        opcode_val = cpu.fetch(&mem);
-        assert_eq!(opcode_val, 0xBB);
+        value = cpu.fetch(&mem);
+        assert_eq!(value, 0xBB);
         assert_eq!(cpu.pc, 0x0012);
     }
 
@@ -112,18 +125,19 @@ mod tests {
         let mut cpu = CPU::initialize();
         let mut mem = Memory::initialize();
 
-        mem.write(0x0010, 0x00);
+        let result = match mem.write(0x0010, 0x00) {
+            Ok(()) => (),
+            Err(err) => panic!("{:?}", err),
+        };
+
         cpu.pc = 0x0010;
-        let opcode_val: u8 = 0x00;
-        let opcode: OpcodeResult = cpu.decode(&mem, opcode_val);
+        let value: OpcodeValue = 0x00;
+        let opcode: Opcode = cpu.decode(&mem, value);
 
         // Check if the correct function was returned by casting it and
         // the function definition to pointers and checking if the pointers
         // are the same. Casting both to usize also works, and preferable
         // to using raw pointers.
-        match opcode {
-            Ok(opcode) => assert_eq!(opcode.func as usize, opcode::op_0x00 as usize),
-            Err(error) => panic!("Error decoding opcode function: `{:?}`", error),
-        }
+        assert_eq!(opcode as usize, opcode::op_0x00 as usize);
     }
 }

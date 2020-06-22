@@ -6,19 +6,23 @@
 
 use crate::cpu::CPU;
 
-#[derive(Debug)]
-pub enum OpcodeError {
-    NotImplemented,
+pub type Opcode = fn(&mut CPU);
+
+pub struct OpcodeTable {
+    pub op: [Opcode; 0x100],
+    pub cb: [Opcode; 0x100],
 }
 
-pub type OpcodeResult = Result<Opcode, OpcodeError>;
+impl OpcodeTable {
+    pub fn load_tables() -> OpcodeTable {
+        let op: [Opcode; 0x100] = [op_0x00; 0x100];
+        let cb: [Opcode; 0x100] = [op_0x00; 0x100];
 
-pub struct Opcode {
-    pub val: u8,
-    pub func: fn(&mut CPU),
+        OpcodeTable { op, cb }
+    }
 }
 
 pub fn op_0x00(cpu: &mut CPU) {
     // 0x00 - NOP
-    println!("Doing nothing @ PC: {:#06x}", cpu.pc-1);
+    println!("--> [0x00]: Doing nothing @ PC: {:#06x}\n", cpu.pc - 1);
 }
